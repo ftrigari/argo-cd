@@ -217,6 +217,15 @@ func (m *appStateManager) SyncAppState(app *v1alpha1.Application, project *v1alp
 		return
 	}
 
+	// If there are many resources that are repeated in the application do not perform the operation
+	if errConditions := app.Status.GetConditions(map[v1alpha1.ApplicationConditionType]bool{
+		v1alpha1.ApplicationConditionRepeatedResourceWarning: true,
+	}); len(errConditions) > 0 {
+		state.Phase = common.OperationError
+		state.Message = argo.FormatAppConditions(errConditions)
+		return
+	}
+
 	initialResourcesRes := make([]common.ResourceSyncResult, len(state.SyncResult.Resources))
 	for i, res := range state.SyncResult.Resources {
 		key := kube.ResourceKey{Group: res.Group, Kind: res.Kind, Namespace: res.Namespace, Name: res.Name}
